@@ -1,0 +1,23 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.database.configMapName }}
+  labels:
+    chart: {{ template "todo.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}  
+data:
+  init-mongo.sh: |
+    #!/bin/bash
+    username=$MONGO_INITDB_USERNAME
+    password=$MONGO_INITDB_PASSWORD
+    database=$MONGO_INITDB_DATABASE
+    mongo <<EOF
+    use admin
+    db.createUser({
+      user: "$username",
+      pwd: "$password",
+      roles: [{ role: 'readWrite', db: '$database' }]
+    });
+    EOF

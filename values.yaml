@@ -1,0 +1,44 @@
+frontend:
+  name: frontend-deployment
+  replicas: 1
+  serviceAccountName: frontend-sa
+  image:
+    name: vijayvikma/frontend
+    tag: v1
+    imagePullPolicy: Always
+    containerPort: 3000
+  servicePort: 80
+  serviceName: frontend-service
+  labels:
+    app: frontend
+    version: v1 
+
+backend:
+  name: backend-deployment
+  replicas: 1
+  serviceAccountName: backend-sa
+  image:
+    name: vijayvikma/backend
+    tag: v1
+    imagePullPolicy: Always
+    containerPort: 4000
+  servicePort: 4000
+  serviceName: backend-service
+  labels:
+    app: backend
+
+    
+
+
+database:
+  name: mongodb
+  configMapName: mongodb-initdb
+  secretName: mongodb-secret
+  serviceName: mongo
+  image:
+    name: mongo
+    tag: 4.4
+    containerPort: 27017
+  servicePort: 27017  
+  labels:
+    app: mongo   

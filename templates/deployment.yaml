@@ -1,0 +1,131 @@
+{{- $versions := list "blue" "green" -}}
+{{- range $versions }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Values.backend.name }}-{{ . }}
+spec:
+  replicas: {{ $.Values.backend.replicas }}
+  selector:
+    matchLabels:
+        app: {{ $.Values.backend.labels.app }}
+        version: {{ . }}
+  template:
+    metadata:
+      labels:
+        app: {{ $.Values.backend.labels.app }}
+        version: {{ . }}
+    spec:
+      serviceAccountName: {{ $.Values.backend.serviceAccountName }}
+      containers:
+      - name: {{ $.Chart.Name }}
+        image: {{ $.Values.backend.image.name }}:{{ $.Values.backend.image.tag }}
+        imagePullPolicy: {{ $.Values.backend.image.imagePullPolicy }}
+        ports:
+        - containerPort: {{ $.Values.backend.image.containerPort }}
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.database.secretName }}
+              key: mongo-db-username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.database.secretName }}
+              key: mongo-db-password
+        - name: MONGO_HOST
+          value: {{ $.Values.database.serviceName }}
+        - name: MONGO_DB
+          valueFrom:
+            secretKeyRef:
+              name: {{ $.Values.database.secretName }}
+              key: mongo-db-name    
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.frontend.name }}
+  labels:
+    chart: {{ template "todo.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.frontend.labels.app }}
+      version: {{ .Values.frontend.labels.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.frontend.labels.app }}
+        version: {{ .Values.frontend.labels.app }}
+    spec:
+      serviceAccountName: {{ .Values.frontend.serviceAccountName }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.frontend.image.name }}:{{ .Values.frontend.image.tag }}
+        imagePullPolicy: {{ .Values.frontend.image.imagePullPolicy }}
+        ports:
+        - containerPort: {{ .Values.frontend.image.containerPort }}
+---
+# mongodb-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.database.name }}
+  labels:
+    chart: {{ template "todo.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.database.labels.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.database.labels.app }}
+    spec:
+      containers:
+        - name:  {{ .Chart.Name }}
+          image: {{ .Values.database.image.name }}:{{ .Values.database.image.tag }}
+          ports:
+            - containerPort: {{ .Values.database.image.containerPort }}
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: mongo-root-username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: mongo-root-password
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: mongo-db-name              
+            - name: MONGO_INITDB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: mongo-db-username
+            - name: MONGO_INITDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: mongo-db-password            
+          volumeMounts:
+            - name: init-mongo
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init-mongo
+          configMap:
+            name: {{ .Values.database.configMapName }}        
